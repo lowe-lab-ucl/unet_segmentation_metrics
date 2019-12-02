@@ -14,6 +14,54 @@ from scipy.ndimage import find_objects
 from . import render
 
 
+def _find_matches(ref, pred):
+    """ find potential matches between objects in the reference and
+    predicted images. These need to have at least 1 pixel of overlap.
+    """
+    matches = {}
+    for label in ref.labels:
+        mask = ref.labeled == label
+        matches[label] = [m for m in np.unique(pred.labeled[mask]) if m>0]
+    return matches
+
+
+def find_matches(ref, pred):
+    # do forward and reverse matching
+    matches_rp = _find_matches(ref, pred)
+    matches_pr = _find_matches(pred, ref)
+
+    true_matches = []
+    in_ref_only = []
+    in_pred_only = []
+
+    for m0, match in matches_rp.items():
+        # no matches
+        if len(match) < 1:
+            in_ref_only.append(m0)
+        # if there is only one match, check that there is only one reverse match
+        elif len(match) == 1:
+            if len(matches_pr[match[0]]) == 1:
+                # one to one
+                true_matches.append((m0, match[0]))
+            elif len(matches_pr[match[0]]) > 1:
+                # two (or more) objects in the prediction match one in the ref
+                in_pred_only += match
+        elif len(match) > 1:
+            in_pred_only += match
+
+    # sanity check that all are accounted for
+    ref_found_labels = set(in_ref_only+ [m[0] for m in true_matches])
+    pred_found_labels = set(in_pred_only + [m[1] for m in true_matches])
+
+    assert( len(ref_found_labels.difference(set(ref.labels))) == 0 )
+    assert( len(pred_found_labels.difference(set(pred.labels))) == 0 )
+
+    # return a dictionary of found matches
+    matches = {'true_matches': true_matches,
+               'in_ref_only': list(set(in_ref_only)),
+               'in_pred_only': list(set(in_pred_only))}
+    return matches
+
 
 class SegmentationMetrics(object):
     """ SegmentationMetrics
@@ -24,11 +72,8 @@ class SegmentationMetrics(object):
         Args:
             reference - a numpy array (wxh) containing labeled objects from the
                 ground truth
-            target - a numpy array (wxh) containing labeled objects from the
+            predicted - a numpy array (wxh) containing labeled objects from the
                 segmentation algorithm
-
-        Members:
-            find_matches: find overlapping regions of the two images
 
         Properties:
             Jaccard: the Jaccard index calculated according to the notes below
@@ -43,78 +88,51 @@ class SegmentationMetrics(object):
         Notes:
             The Jaccard metric is calculated accordingly:
 
-                FP = number of objects in target but not in reference
+                FP = number of objects in predicted but not in reference
                 TP = number of objects in both
                 TN = background correctly segmented (not used)
-                FN = number of objects in reference but not in target
+                FN = number of objects in true but not in predicted
 
                 J = TP / (TP+FP+FN)
 
             The IoU is calculated as the intersection of the binary segmentation
             divided by the union.
 
+            TODO(arl): need to address undersegmentation detection
+
     """
-    def __init__(self, reference, target):
-        assert(isinstance(target, LabeledSegmentation))
+    def __init__(self, reference, predicted):
+        assert(isinstance(predicted, LabeledSegmentation))
         assert(isinstance(reference, LabeledSegmentation))
         self._reference = reference
-        self._target = target
+        self._predicted = predicted
 
-        self._matches = self.find_matches()
+        # find the matches
+        self._matches = find_matches(self._reference, self._predicted)
 
-    def find_matches(self):
-        """ find potential matches between objects in the reference and
-        target images. These need to have at least 1 pixel of overlap.
-        """
-        matches = []
-        for label in self._reference.labels:
-            mask = self._reference.labeled == label
-            match = [m for m in np.unique(self._target.labeled[mask]) if m>0]
-            matches.append((label, match))
-        return matches
 
     @property
     def image_overlay(self):
-        return np.stack([self._target.image,
+        n_labels = max([self._predicted.n_labels, self._reference.n_labels])
+        scale = int(255/n_labels)
+        return np.stack([self._predicted.image,
                          self._reference.image,
-                         self._target.image],axis=-1)*127
-
-    @property
-    def true_matches(self):
-        """ present in both reference and target """
-        return [m for m in self._matches if len(m[1]) == 1]
-
-    @property
-    def non_unique_matches(self):
-        """ oversegmentation """
-        multi = []
-        for m in self._matches:
-            if len(m[1]) > 1:
-                multi += m[1]
-        return multi
-
-    @property
-    def unmatched(self):
-        """ objects in target, not in reference, i.e. hallucinations  """
-        tgt_matches = []
-        for m in self._matches:
-            tgt_matches += m[1]
-        return list(set(self._target.labels).difference(set(tgt_matches)))
+                         self._predicted.image],axis=-1)*127
 
     @property
     def true_positives(self):
-        """ only one match between reference and target """
-        return [m[0] for m in self.true_matches]
+        """ only one match between reference and predicted """
+        return self._matches['true_matches']
 
     @property
     def false_negatives(self):
-        """ no match in target for reference object """
-        return [m[0] for m in self._matches if len(m[1]) < 1]
+        """ no match in predicted for reference object """
+        return self._matches['in_ref_only']
 
     @property
     def false_positives(self):
         """ combination of non unique matches and unmatched objects """
-        return self.non_unique_matches + self.unmatched
+        return self._matches['in_pred_only']
 
     @property
     def Jaccard(self):
@@ -128,12 +146,12 @@ class SegmentationMetrics(object):
     def IoU(self):
         """ Intersection over Union (IoU) metric """
         iou = []
-        for m in self.true_matches:
+        for m in self.true_positives:
             mask_ref = self._reference.labeled == m[0]
-            mask_tgt = self._target.labeled == m[1]
+            mask_pred = self._predicted.labeled == m[1]
 
-            intersection = np.logical_and(mask_ref, mask_tgt)
-            union = np.logical_or(mask_ref, mask_tgt)
+            intersection = np.logical_and(mask_ref, mask_pred)
+            union = np.logical_or(mask_ref, mask_pred)
 
             iou.append(np.sum(intersection)/np.sum(union))
         return iou
@@ -141,16 +159,16 @@ class SegmentationMetrics(object):
     @property
     def pixel_identity(self):
         n_total = np.prod(self._reference.image.shape)
-        return np.sum(self._reference.image == self._target.image) / n_total
+        return np.sum(self._reference.image == self._predicted.image) / n_total
 
     @property
     def localization_error(self):
         """ localization error """
         raise NotImplementedError
         ref_centroids = self._reference.centroids
-        tgt_centroids = self._target.centroids
+        tgt_centroids = self._predicted.centroids
         positional_error = []
-        for m in self.true_matches:
+        for m in self.true_positives:
             true_centroid = np.array(ref_centroids[m[0]-1])
             pred_centroid = np.array(tgt_centroids[m[1][0]-1])
             err = np.sum((true_centroid-pred_centroid)**2)
@@ -162,7 +180,7 @@ class SegmentationMetrics(object):
         repr = "\nUNet Segmentation Metrics: \n"
         repr += "================================ \n"
         repr += "True objects: \t\t{:>5}\n".format(len(self._reference.labels))
-        repr += "Predicted objects: \t{:>5}\n".format(len(self._target.labels))
+        repr += "Predicted objects: \t{:>5}\n".format(len(self._predicted.labels))
         repr += "True positives: \t{:>5}\n".format(len(self.true_positives))
         repr += "False positives: \t{:>5}\n".format(len(self.false_positives))
         repr += "False negatives: \t{:>5}\n".format(len(self.false_negatives))
@@ -202,7 +220,7 @@ class LabeledSegmentation(object):
 
     @property
     def labels(self):
-        return range(1, self.n_labels+1)
+        return range(1, self.n_labels)
 
     @property
     def centroids(self):
@@ -217,14 +235,14 @@ class LabeledSegmentation(object):
 
 
 
-def calculate(reference, target):
-    """ Take a target image and compare with the reference image.
+def calculate(reference, predicted):
+    """ Take a predicted image and compare with the reference image.
 
     Compute various metrics.
     """
 
     ref = LabeledSegmentation(reference)
-    tgt = LabeledSegmentation(target)
+    tgt = LabeledSegmentation(predicted)
 
     # make sure they are the same size
     assert(ref.shape == tgt.shape)
