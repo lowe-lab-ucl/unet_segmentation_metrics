@@ -11,7 +11,7 @@ from scipy.ndimage import label
 from scipy.ndimage import center_of_mass
 from scipy.ndimage import find_objects
 
-import render
+from . import render
 
 
 

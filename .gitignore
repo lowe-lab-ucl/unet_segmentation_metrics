@@ -1,2 +1,3 @@
 .DS_Store
 segmetrics/__pycache__
+notebooks/.ipynb_checkpoints

@@ -18,7 +18,7 @@ def plot_metrics(seg_metrics):
     for i, tp in enumerate(seg_metrics.true_positives):
       iou[tp-1] = '{:.2f}'.format(IoU[i])
 
-    fig, ax = plt.subplots(1)
+    fig, ax = plt.subplots(1, figsize=(16,12))
     # plt.imshow(J_image)
     ax.imshow(seg_metrics.image_overlay)
 
