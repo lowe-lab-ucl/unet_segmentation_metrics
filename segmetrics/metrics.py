@@ -239,11 +239,4 @@ def calculate(reference, target):
 
 
 if __name__ == "__main__":
-
-    p = '/Users/arl/Dropbox/Data/TestingData/UNet2D_testing_Scribble/set12'
-    ref = imread(os.path.join(p, 'labels_compressed', 'l_7.tif'))
-    tgt = imread(os.path.join(p, 'segmented_2019-11-27', 's_7.tif'))
-
-    m = calculate(ref, tgt)
-    print(m)
-    m.plot()
+    pass
