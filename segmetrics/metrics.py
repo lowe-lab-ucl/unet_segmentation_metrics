@@ -160,15 +160,15 @@ class SegmentationMetrics(object):
 
     def __repr__(self):
         repr = "\nUNet Segmentation Metrics: \n"
-        repr += "========================== \n"
-        repr += "True objects: \t{}\n".format(len(self._reference.labels))
-        repr += "Predicted objects: \t{}\n".format(len(self._target.labels))
-        repr += "True positives: \t{}\n".format(len(self.true_positives))
-        repr += "False positives: \t{}\n".format(len(self.false_positives))
-        repr += "False negatives: \t{}\n".format(len(self.false_negatives))
-        repr += "Jaccard metric: \t{:.2f}\n".format(self.Jaccard)
-        repr += "Mean IoU metric: \t{:.2f}\n".format(np.mean(self.IoU))
-        repr += "Pixel identity: \t{:.2f}\n".format(self.pixel_identity)
+        repr += "================================ \n"
+        repr += "True objects: \t\t{:>5}\n".format(len(self._reference.labels))
+        repr += "Predicted objects: \t{:>5}\n".format(len(self._target.labels))
+        repr += "True positives: \t{:>5}\n".format(len(self.true_positives))
+        repr += "False positives: \t{:>5}\n".format(len(self.false_positives))
+        repr += "False negatives: \t{:>5}\n".format(len(self.false_negatives))
+        repr += "Jaccard metric: \t{:>8.2f}\n".format(self.Jaccard)
+        repr += "Mean IoU metric: \t{:>8.2f}\n".format(np.mean(self.IoU))
+        repr += "Pixel identity: \t{:>8.2f}\n".format(self.pixel_identity)
         # repr += "Mean localization error: \t{:.2f}\n".format(np.mean(self.localization_error))
         return repr
 
