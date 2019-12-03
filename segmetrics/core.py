@@ -41,7 +41,7 @@ def find_matches(ref, pred):
         # if there is only one match, check that there is only one reverse match
         elif len(match) == 1:
             if match[0] not in matches_pr:
-                print('oof')
+                print('oof', match[0], matches_pr)
             elif len(matches_pr[match[0]]) == 1:
                 # one to one
                 true_matches.append((m0, match[0]))
@@ -244,7 +244,7 @@ class LabeledSegmentation(object):
 
     @property
     def labels(self):
-        return range(1, self.n_labels)
+        return range(1, self.n_labels+1)
 
     @property
     def centroids(self):
