@@ -13,13 +13,13 @@ Use it to calculate:
 ### Usage
 
 ```python
-from segmetrics import metrics
+import segmetrics
 from skimage.io import imread
 
 true = imread('true.tif')
 pred = imread('pred.tif')
 
-m = metrics.calculate(true, pred)
+m = segmetrics.calculate(true, pred)
 
 print(m)
 

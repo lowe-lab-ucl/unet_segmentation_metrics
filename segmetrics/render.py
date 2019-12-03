@@ -14,7 +14,7 @@ def plot_metrics(seg_metrics):
     ref = seg_metrics._reference
 
     iou = [None] * len(ref.labels)
-    IoU = seg_metrics.IoU
+    IoU = seg_metrics.per_object_IoU
     for i, tp in enumerate(seg_metrics.true_positives):
         iou[tp[0]-1] = '{:.2f}'.format(IoU[i])
 

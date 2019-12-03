@@ -40,7 +40,9 @@ def find_matches(ref, pred):
             in_ref_only.append(m0)
         # if there is only one match, check that there is only one reverse match
         elif len(match) == 1:
-            if len(matches_pr[match[0]]) == 1:
+            if match[0] not in matches_pr:
+                print('oof')
+            elif len(matches_pr[match[0]]) == 1:
                 # one to one
                 true_matches.append((m0, match[0]))
             elif len(matches_pr[match[0]]) > 1:
@@ -50,7 +52,7 @@ def find_matches(ref, pred):
             in_pred_only += match
 
     # sanity check that all are accounted for
-    ref_found_labels = set(in_ref_only+ [m[0] for m in true_matches])
+    ref_found_labels = set(in_ref_only + [m[0] for m in true_matches])
     pred_found_labels = set(in_pred_only + [m[1] for m in true_matches])
 
     assert( len(ref_found_labels.difference(set(ref.labels))) == 0 )
@@ -112,12 +114,31 @@ class SegmentationMetrics(object):
 
 
     @property
+    def metrics(self):
+        return [self.n_true_labels,
+                self.n_pred_labels,
+                len(self.true_positives),
+                len(self.false_positives),
+                len(self.false_negatives),
+                self.IoU,
+                self.Jaccard,
+                self.pixel_identity]
+
+    @property
     def image_overlay(self):
         n_labels = max([self._predicted.n_labels, self._reference.n_labels])
         scale = int(255/n_labels)
         return np.stack([self._predicted.image,
                          self._reference.image,
                          self._predicted.image],axis=-1)*127
+
+    @property
+    def n_true_labels(self):
+        return self._reference.n_labels
+
+    @property
+    def n_pred_labels(self):
+        return self._predicted.n_labels
 
     @property
     def true_positives(self):
@@ -143,7 +164,7 @@ class SegmentationMetrics(object):
         return tp / (tp+fn+fp)
 
     @property
-    def IoU(self):
+    def per_object_IoU(self):
         """ Intersection over Union (IoU) metric """
         iou = []
         for m in self.true_positives:
@@ -155,6 +176,10 @@ class SegmentationMetrics(object):
 
             iou.append(np.sum(intersection)/np.sum(union))
         return iou
+
+    @property
+    def IoU(self):
+        return np.mean(self.per_object_IoU)
 
     @property
     def pixel_identity(self):
@@ -175,17 +200,16 @@ class SegmentationMetrics(object):
             positional_error.append(err)
         return positional_error
 
-
     def __repr__(self):
         repr = "\nUNet Segmentation Metrics: \n"
         repr += "================================ \n"
-        repr += "True objects: \t\t{:>5}\n".format(len(self._reference.labels))
-        repr += "Predicted objects: \t{:>5}\n".format(len(self._predicted.labels))
+        repr += "True objects: \t\t{:>5}\n".format(self._reference.n_labels)
+        repr += "Predicted objects: \t{:>5}\n".format(self._predicted.n_labels)
         repr += "True positives: \t{:>5}\n".format(len(self.true_positives))
         repr += "False positives: \t{:>5}\n".format(len(self.false_positives))
         repr += "False negatives: \t{:>5}\n".format(len(self.false_negatives))
         repr += "Jaccard metric: \t{:>8.2f}\n".format(self.Jaccard)
-        repr += "Mean IoU metric: \t{:>8.2f}\n".format(np.mean(self.IoU))
+        repr += "Mean IoU metric: \t{:>8.2f}\n".format(self.IoU)
         repr += "Pixel identity: \t{:>8.2f}\n".format(self.pixel_identity)
         # repr += "Mean localization error: \t{:.2f}\n".format(np.mean(self.localization_error))
         return repr
