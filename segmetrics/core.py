@@ -189,13 +189,12 @@ class SegmentationMetrics(object):
     @property
     def localization_error(self):
         """ localization error """
-        raise NotImplementedError
         ref_centroids = self._reference.centroids
         tgt_centroids = self._predicted.centroids
         positional_error = []
         for m in self.true_positives:
             true_centroid = np.array(ref_centroids[m[0]-1])
-            pred_centroid = np.array(tgt_centroids[m[1][0]-1])
+            pred_centroid = np.array(tgt_centroids[m[1]-1])
             err = np.sum((true_centroid-pred_centroid)**2)
             positional_error.append(err)
         return positional_error
@@ -272,6 +271,16 @@ def calculate(reference, predicted):
     assert(ref.shape == tgt.shape)
 
     return SegmentationMetrics(ref, tgt)
+
+
+def batch(files):
+    """ batch process a list of files """
+    metrix = []
+    for f_ref, r_pred in files:
+        true = imread(f_ref)
+        pred = imread(f_pred)
+        metrix.append(calculate(true, pred))
+    return metrix
 
 
 
