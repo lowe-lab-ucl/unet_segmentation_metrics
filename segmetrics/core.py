@@ -14,6 +14,18 @@ from scipy.ndimage import find_objects
 from . import render
 
 
+METRICS = ('n_true_labels',
+           'n_pred_labels',
+           'n_true_positives',
+           'n_false_positives',
+           'n_false_negatives',
+           'IoU',
+           'Jaccard',
+           'pixel_identity',
+           'localization_error')
+
+
+
 def _find_matches(ref, pred):
     """ find potential matches between objects in the reference and
     predicted images. These need to have at least 1 pixel of overlap.
@@ -41,7 +53,7 @@ def find_matches(ref, pred):
         # if there is only one match, check that there is only one reverse match
         elif len(match) == 1:
             if match[0] not in matches_pr:
-                print('oof', match[0], matches_pr)
+                raise Exception('Something doesn\'t make sense...')
             elif len(matches_pr[match[0]]) == 1:
                 # one to one
                 true_matches.append((m0, match[0]))
@@ -63,6 +75,87 @@ def find_matches(ref, pred):
                'in_ref_only': list(set(in_ref_only)),
                'in_pred_only': list(set(in_pred_only))}
     return matches
+
+
+
+class MetricResults(object):
+    def __init__(self, metrics):
+        assert(isinstance(metrics, SegmentationMetrics))
+        self._images = 1
+        self._metrics = metrics
+
+        # list of metrics that are aggregated
+        self._agg = ('n_true_labels',
+                     'n_pred_labels',
+                     'n_true_positives',
+                     'n_false_positives',
+                     'n_false_negatives',
+                     'per_object_IoU',
+                     'per_object_localization_error',
+                     'per_image_pixel_identity')
+
+    def __getattr__(self, key):
+        return getattr(self._metrics, key)
+
+    @property
+    def n_images(self):
+        if any([getattr(self, m) is None for m in self._agg]):
+            return 0
+        else:
+            return self._images
+
+    def __add__(self, result):
+        assert(isinstance(result, MetricResults))
+        for m in self._agg:
+            setattr(self, m, getattr(result, m)+getattr(self, m))
+        self._images+=1
+        return self
+
+    def __repr__(self):
+        title = f' Segmentation Metrics (n={self.n_images})\n'
+        hbar = '='*len(title)+'\n'
+        r = hbar + title + hbar
+        for m in METRICS:
+            mval = getattr(self,m)
+            if isinstance(mval, float):
+                r+= f'{m}: {mval:.3f}\n'
+            else:
+                r+= f'{m}: {mval}\n'
+        return r
+
+
+    @property
+    def localization_error(self):
+        return np.mean(self.per_object_localization_error)
+
+    @property
+    def IoU(self):
+        return np.mean(self.per_object_IoU)
+
+    @property
+    def Jaccard(self):
+        """ Jaccard metric """
+        tp = self.n_true_positives
+        fn = self.n_false_negatives
+        fp = self.n_false_positives
+        return tp / (tp+fn+fp)
+
+    @property
+    def pixel_identity(self):
+        return np.mean(self.per_image_pixel_identity)
+
+
+    @staticmethod
+    def merge(results):
+        """ merge n results together and return a single object """
+        assert(isinstance(results, list))
+        merged = results.pop(0)
+        for result in results:
+            assert(isinstance(result, MetricResults))
+            assert(result.n_images == 1)
+            merged = merged + result
+        return merged
+
 
 
 class SegmentationMetrics(object):
@@ -114,15 +207,9 @@ class SegmentationMetrics(object):
 
 
     @property
-    def metrics(self):
-        return [self.n_true_labels,
-                self.n_pred_labels,
-                len(self.true_positives),
-                len(self.false_positives),
-                len(self.false_negatives),
-                self.IoU,
-                self.Jaccard,
-                self.pixel_identity]
+    def results(self):
+        return MetricResults(self)
+
 
     @property
     def image_overlay(self):
@@ -156,12 +243,11 @@ class SegmentationMetrics(object):
         return self._matches['in_pred_only']
 
     @property
-    def Jaccard(self):
-        """ Jaccard metric """
-        tp = len(self.true_positives)
-        fn = len(self.false_negatives)
-        fp = len(self.false_positives)
-        return tp / (tp+fn+fp)
+    def n_true_positives(self): return len(self.true_positives)
+    @property
+    def n_false_negatives(self): return len(self.false_negatives)
+    @property
+    def n_false_positives(self): return len(self.false_positives)
 
     @property
     def per_object_IoU(self):
@@ -178,16 +264,12 @@ class SegmentationMetrics(object):
         return iou
 
     @property
-    def IoU(self):
-        return np.mean(self.per_object_IoU)
+    def per_image_pixel_identity(self):
+        n_tot = np.prod(self._reference.image.shape)
+        return [np.sum(self._reference.image == self._predicted.image) / n_tot]
 
     @property
-    def pixel_identity(self):
-        n_total = np.prod(self._reference.image.shape)
-        return np.sum(self._reference.image == self._predicted.image) / n_total
-
-    @property
-    def localization_error(self):
+    def per_object_localization_error(self):
         """ localization error """
         ref_centroids = self._reference.centroids
         tgt_centroids = self._predicted.centroids
@@ -198,20 +280,6 @@ class SegmentationMetrics(object):
             err = np.sum((true_centroid-pred_centroid)**2)
             positional_error.append(err)
         return positional_error
-
-    def __repr__(self):
-        repr = "\nUNet Segmentation Metrics: \n"
-        repr += "================================ \n"
-        repr += "True objects: \t\t{:>5}\n".format(self._reference.n_labels)
-        repr += "Predicted objects: \t{:>5}\n".format(self._predicted.n_labels)
-        repr += "True positives: \t{:>5}\n".format(len(self.true_positives))
-        repr += "False positives: \t{:>5}\n".format(len(self.false_positives))
-        repr += "False negatives: \t{:>5}\n".format(len(self.false_negatives))
-        repr += "Jaccard metric: \t{:>8.2f}\n".format(self.Jaccard)
-        repr += "Mean IoU metric: \t{:>8.2f}\n".format(self.IoU)
-        repr += "Pixel identity: \t{:>8.2f}\n".format(self.pixel_identity)
-        # repr += "Mean localization error: \t{:.2f}\n".format(np.mean(self.localization_error))
-        return repr
 
     def plot(self):
         render.plot_metrics(self)
@@ -276,11 +344,13 @@ def calculate(reference, predicted):
 def batch(files):
     """ batch process a list of files """
     metrix = []
-    for f_ref, r_pred in files:
+    for f_ref, f_pred in files:
+        print(f_pred)
         true = imread(f_ref)
         pred = imread(f_pred)
-        metrix.append(calculate(true, pred))
-    return metrix
+        result = calculate(true, pred).results
+        metrix.append(result)
+    return MetricResults.merge(metrix)
 
 
 
