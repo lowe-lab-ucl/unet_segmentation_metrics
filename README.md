@@ -2,40 +2,59 @@
 
 *WORK IN PROGRESS*
 
-Simple tools to assess the performance of UNet segmentation networks by comparing the ground truth image to the prediction.
+Simple Python 3 tools to assess the performance of UNet segmentation networks by comparing the ground truth image to the prediction.
 
 Use it to calculate:
 + Jaccard metric for object detection
 + Intersection over Union (IoU) for object segmentation accuracy
-+ Localization (positional) error
++ Localization (positional) error for estimating MOTP during tracking
 + Pixel identity
 
-### Usage
+### Single image usage
 
 ```python
-import segmetrics
+import umetrics
 from skimage.io import imread
 
 true = imread('true.tif')
 pred = imread('pred.tif')
 
-m = segmetrics.calculate(true, pred)
+result = umetrics.calculate(true, pred)
 
-print(m)
-
+print(result)
 ```
 
 returns:
 
 ```
-UNet Segmentation Metrics:
-==========================
-True objects:      336
-Predicted objects: 320
-True positives:    315
-False positives:    13
-False negatives:    17
-Jaccard metric:      0.91
-Mean IoU metric:     0.83
-Pixel identity:      0.97
+============================
+ Segmentation Metrics (n=1)
+============================
+n_true_labels: 110
+n_pred_labels: 103
+n_true_positives: 97
+n_false_positives: 6
+n_false_negatives: 8
+IoU: 0.838
+Jaccard: 0.874
+pixel_identity: 0.991
+localization_error: 2.635
 ```
+
+
+### Batch processing
+
+```python
+import umetrics
+
+# provide a list of file pairs ('true', 'prediction')
+files = [('true0.tif', 'pred0.tif'),
+         ('true1.tif', 'pred1.tif'),
+         ('true2.tif', 'pred2.tif')]
+
+batch_result = umetrics.batch(files)
+
+print(batch_result)
+```
+
+Returns aggregate statistics over the batch. Jaccard index is calculated over all found objects, while other metrics are the average IoU etc.
