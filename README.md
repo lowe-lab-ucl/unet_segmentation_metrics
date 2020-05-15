@@ -10,6 +10,7 @@ Use it to calculate:
 + Localization (positional) error for estimating MOTP during tracking
 + Pixel identity
 
+
 ### Single image usage
 
 ```python
@@ -58,3 +59,23 @@ print(batch_result)
 ```
 
 Returns aggregate statistics over the batch. Jaccard index is calculated over all found objects, while other metrics are the average IoU etc.
+
+
+### Installation
+
+1. First clone the repo:
+```sh
+$ git clone https://github.com/quantumjot/unet_segmentation_metrics.git
+```
+
+2. (Optional, but advised) Create a conda environment:
+```sh
+$ conda create -n umetrics
+$ conda activate umetrics
+```
+
+3. Install the package
+```sh
+$ cd unet_segmentation_metrics
+$ pip install .
+```
