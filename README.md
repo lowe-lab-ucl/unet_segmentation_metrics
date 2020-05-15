@@ -70,7 +70,7 @@ $ git clone https://github.com/quantumjot/unet_segmentation_metrics.git
 
 2. (Optional, but advised) Create a conda environment:
 ```sh
-$ conda create -n umetrics
+$ conda create -n umetrics python=3.7
 $ conda activate umetrics
 ```
 
