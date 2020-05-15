@@ -22,7 +22,7 @@ pred = imread('pred.tif')
 
 result = umetrics.calculate(true, pred)
 
-print(result)
+print(result.results)
 ```
 
 returns:
@@ -54,8 +54,6 @@ files = [('true0.tif', 'pred0.tif'),
          ('true2.tif', 'pred2.tif')]
 
 batch_result = umetrics.batch(files)
-
-print(batch_result)
 ```
 
 Returns aggregate statistics over the batch. Jaccard index is calculated over all found objects, while other metrics are the average IoU etc.
