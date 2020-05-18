@@ -2,7 +2,9 @@
 
 *WORK IN PROGRESS*
 
-Simple Python 3 tools to assess the performance of UNet segmentation networks (or any other segmentation method) by comparing the ground truth image to the prediction.
+Simple Python 3 tools to assess the performance of UNet segmentation networks
+(or any other segmentation method) by comparing the prediction to a ground truth
+ image.
 
 Use it to calculate:
 + Jaccard metric for object detection
@@ -21,13 +23,13 @@ TODO:
 import umetrics
 from skimage.io import imread
 
-true = imread('true.tif')
-pred = imread('pred.tif')
+y_true = imread('true.tif')
+y_pred = imread('pred.tif')
 
 
 # can now make the calculation strict, by only considering objects that have
 # an IoU above a theshold as being true positives
-result = umetrics.calculate(true, pred, strict=True, iou_threshold=0.5)
+result = umetrics.calculate(y_true, y_pred, strict=True, iou_threshold=0.5)
 
 print(result.results)
 ```
@@ -38,7 +40,7 @@ returns:
 ============================
  Segmentation Metrics (n=1)
 ============================
-Strict: True (IoU > 0.7)
+Strict: True (IoU > 0.5)
 n_true_labels: 354
 n_pred_labels: 362
 n_true_positives: 345
@@ -64,7 +66,8 @@ files = [('true0.tif', 'pred0.tif'),
 batch_result = umetrics.batch(files)
 ```
 
-Returns aggregate statistics over the batch. Jaccard index is calculated over all found objects, while other metrics are the average IoU etc.
+Returns aggregate statistics over the batch. Jaccard index is calculated over
+all found objects, while other metrics are the average IoU etc.
 
 
 ### Installation
