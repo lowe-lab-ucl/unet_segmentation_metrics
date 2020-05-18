@@ -38,6 +38,13 @@ def _find_matches(ref, pred):
 
 
 def find_matches(ref, pred):
+    """ Find matches between the reference image and the predicted image.
+
+    Args:
+        ref
+        pred
+    """
+
     # do forward and reverse matching
     matches_rp = _find_matches(ref, pred)
     matches_pr = _find_matches(pred, ref)
@@ -115,6 +122,8 @@ class MetricResults(object):
         title = f' Segmentation Metrics (n={self.n_images})\n'
         hbar = '='*len(title)+'\n'
         r = hbar + title + hbar
+        if self.strict:
+            r += f'Strict: {self.strict} (IoU > {self.iou_threshold})\n'
         for m in METRICS:
             mval = getattr(self,m)
             if isinstance(mval, float):
@@ -158,7 +167,7 @@ class MetricResults(object):
 
 
 
-class SegmentationMetrics(object):
+class SegmentationMetrics:
     """ SegmentationMetrics
 
         A class for calculating various segmentation metrics to assess the
@@ -169,6 +178,9 @@ class SegmentationMetrics(object):
                 ground truth
             predicted - a numpy array (wxh) containing labeled objects from the
                 segmentation algorithm
+
+            strict - (bool) whether to disregard matches with a low IoU score
+            iou_threshold - (float) threshold for strict matching
 
         Properties:
             Jaccard: the Jaccard index calculated according to the notes below
@@ -196,20 +208,46 @@ class SegmentationMetrics(object):
             TODO(arl): need to address undersegmentation detection
 
     """
-    def __init__(self, reference, predicted):
+    def __init__(self,
+                 reference,
+                 predicted,
+                 **kwargs):
+
         assert(isinstance(predicted, LabeledSegmentation))
         assert(isinstance(reference, LabeledSegmentation))
+
+
         self._reference = reference
         self._predicted = predicted
+        self._strict = kwargs.get('strict', False)
+        self._iou_threshold = kwargs.get('iou_threshold', 0.5)
+
+        assert(self.iou_threshold>=0. and self.iou_threshold<=1.)
+        assert(isinstance(self.strict, bool))
 
         # find the matches
         self._matches = find_matches(self._reference, self._predicted)
 
+        # if we're in strict mode, prune the matches
+        if self.strict:
+            iou = self.per_object_IoU
+            tp = [self.true_positives[i] for i, ov in enumerate(iou) if ov > self.iou_threshold]
+            fp = list(set(self.true_positives).difference(tp))
+
+            self._matches['true_matches'] = tp
+            self._matches['in_pred_only'] += [m[1] for m in fp]
+
+    @property
+    def strict(self):
+        return self._strict
+
+    @property
+    def iou_threshold(self):
+        return self._iou_threshold
 
     @property
     def results(self):
         return MetricResults(self)
-
 
     @property
     def image_overlay(self):
@@ -326,7 +364,7 @@ class LabeledSegmentation(object):
 
 
 
-def calculate(reference, predicted):
+def calculate(reference, predicted, **kwargs):
     """ Take a predicted image and compare with the reference image.
 
     Compute various metrics.
@@ -338,17 +376,17 @@ def calculate(reference, predicted):
     # make sure they are the same size
     assert(ref.shape == tgt.shape)
 
-    return SegmentationMetrics(ref, tgt)
+    return SegmentationMetrics(ref, tgt, **kwargs)
 
 
-def batch(files):
+def batch(files, **kwargs):
     """ batch process a list of files """
     metrix = []
     for f_ref, f_pred in files:
         print(f_pred)
         true = imread(f_ref)
         pred = imread(f_pred)
-        result = calculate(true, pred).results
+        result = calculate(true, pred, **kwargs).results
         metrix.append(result)
     return MetricResults.merge(metrix)
 

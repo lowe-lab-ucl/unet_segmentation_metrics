@@ -2,13 +2,17 @@
 
 *WORK IN PROGRESS*
 
-Simple Python 3 tools to assess the performance of UNet segmentation networks by comparing the ground truth image to the prediction.
+Simple Python 3 tools to assess the performance of UNet segmentation networks (or any other segmentation method) by comparing the ground truth image to the prediction.
 
 Use it to calculate:
 + Jaccard metric for object detection
 + Intersection over Union (IoU) for object segmentation accuracy
 + Localization (positional) error for estimating MOTP during tracking
 + Pixel identity
+
+TODO:
++ [x] Add strict matching with IoU threshold  
++ [ ] Add confusion matrix for multi-label/classification type tasks
 
 
 ### Single image usage
@@ -20,7 +24,10 @@ from skimage.io import imread
 true = imread('true.tif')
 pred = imread('pred.tif')
 
-result = umetrics.calculate(true, pred)
+
+# can now make the calculation strict, by only considering objects that have
+# an IoU above a theshold as being true positives
+result = umetrics.calculate(true, pred, strict=True, iou_threshold=0.5)
 
 print(result.results)
 ```
@@ -31,15 +38,16 @@ returns:
 ============================
  Segmentation Metrics (n=1)
 ============================
-n_true_labels: 110
-n_pred_labels: 103
-n_true_positives: 97
-n_false_positives: 6
-n_false_negatives: 8
-IoU: 0.838
-Jaccard: 0.874
-pixel_identity: 0.991
-localization_error: 2.635
+Strict: True (IoU > 0.7)
+n_true_labels: 354
+n_pred_labels: 362
+n_true_positives: 345
+n_false_positives: 10
+n_false_negatives: 0
+IoU: 0.999
+Jaccard: 0.972
+pixel_identity: 0.998
+localization_error: 0.010
 ```
 
 
