@@ -322,6 +322,9 @@ class SegmentationMetrics:
     def plot(self):
         render.plot_metrics(self)
 
+    def to_napari(self):
+        return render.render_metrics_napari(self)
+
 
 
 
