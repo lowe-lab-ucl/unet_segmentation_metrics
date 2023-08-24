@@ -340,7 +340,7 @@ class LabeledSegmentation(object):
         self.image = image
 
         # label it
-        self.labeled, self.n_labels = label(image.astype(np.bool))
+        self.labeled, self.n_labels = label(image.astype(bool))
 
     @property
     def shape(self):
