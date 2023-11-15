@@ -1,7 +1,6 @@
+*.ipynb_checkpoints
+*.egg-info/
 .DS_Store
 __pycache__
 notebooks/
-.ipynb_checkpoints
-
-.egg-info/
 _version.py
