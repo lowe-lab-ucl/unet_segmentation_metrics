@@ -1,13 +1,15 @@
-__author__ = "Alan R. Lowe"
-__email__ = "a.lowe@ucl.ac.uk"
-
+from __future__ import annotations
 
 import numpy as np
+import numpy.typing as npt
 
 from skimage.io import imread
 from scipy.ndimage import label
 from scipy.ndimage import center_of_mass
 from scipy.ndimage import find_objects
+from scipy.optimize import linear_sum_assignment
+
+from typing import Dict
 
 from . import render
 
@@ -25,63 +27,72 @@ METRICS = (
 )
 
 
-def _find_matches(ref, pred):
-    """find potential matches between objects in the reference and
-    predicted images. These need to have at least 1 pixel of overlap.
+def _IoU(ref, pred) -> float:
+    """Calculate the IoU between two binary masks."""
+    intersection = np.sum(np.logical_and(ref, pred))
+    union = np.sum(np.logical_or(ref, pred))
+    iou = 0.0 if union == 0 else intersection / union
+    return iou
+
+
+def find_matches(ref: LabeledSegmentation, pred: LabeledSegmentation) -> Dict:
+    """Perform matching between the reference and the predicted image.
+
+    Parameters
+    ----------
+    ref :
+        The reference (ground truth) segmentation.
+    pred :
+        The predicted segmentation.
+
+    Return
+    ------
+    matches : dict
+        A dictionary of matches between the two images.
+
     """
-    matches = {}
-    for ref_label in ref.labels:
+
+    # return a dictionary of found matches
+    matches = {
+        "true_matches": [],
+        "in_ref_only": [],
+        "in_pred_only": [],
+    }
+
+    # make an infinite cost matrix, so that we only consider matches where
+    # there is some overlap in the masks
+    cost_matrix = np.full((len(ref.labels), len(pred.labels)), np.inf)
+
+    for r_id, ref_label in enumerate(ref.labels):
         mask = ref.labeled == ref_label
-        matches[ref_label] = [m for m in np.unique(pred.labeled[mask]) if m > 0]
-    return matches
+        _matches = [m for m in np.unique(pred.labeled[mask]) if m > 0]
+        for pred_label in _matches:
+            p_id = pred.labels.index(pred_label)
+            reward = _IoU(mask, pred.labeled == pred_label)
+            cost_matrix[r_id, p_id] = 1.0 - reward
 
+    try:
+        sol_row, sol_col = linear_sum_assignment(cost_matrix)
+    except ValueError:
+        return matches
 
-def find_matches(ref, pred):
-    """Find matches between the reference image and the predicted image.
+    # now that we've solved the LAP, find the matches that have been made
+    used_ref = [ref.labels[row] for row in sol_row]
+    used_pred = [pred.labels[col] for col in sol_col]
+    assert len(used_ref) == len(used_pred)
+    true_matches = list(zip(used_ref, used_pred))
 
-    Args:
-        ref
-        pred
-    """
-
-    # do forward and reverse matching
-    matches_rp = _find_matches(ref, pred)
-    matches_pr = _find_matches(pred, ref)
-
-    true_matches = []
-    in_ref_only = []
-    in_pred_only = []
-
-    for m0, match in matches_rp.items():
-        # no matches
-        if len(match) < 1:
-            in_ref_only.append(m0)
-        # if there is only one match, check that there is only one reverse match
-        elif len(match) == 1:
-            if match[0] not in matches_pr:
-                raise Exception("Something doesn't make sense...")
-            elif len(matches_pr[match[0]]) == 1:
-                # one to one
-                true_matches.append((m0, match[0]))
-            elif len(matches_pr[match[0]]) > 1:
-                # two (or more) objects in the prediction match one in the ref
-                in_pred_only += match
-        elif len(match) > 1:
-            in_pred_only += match
-
-    # sanity check that all are accounted for
-    ref_found_labels = set(in_ref_only + [m[0] for m in true_matches])
-    pred_found_labels = set(in_pred_only + [m[1] for m in true_matches])
-
-    assert len(ref_found_labels.difference(set(ref.labels))) == 0
-    assert len(pred_found_labels.difference(set(pred.labels))) == 0
+    # find the labels that haven't been used
+    in_ref_only = list(set(ref.labels).difference(used_ref))
+    in_pred_only = list(set(pred.labels).difference(used_pred))
 
     # return a dictionary of found matches
     matches = {
         "true_matches": true_matches,
-        "in_ref_only": list(set(in_ref_only)),
-        "in_pred_only": list(set(in_pred_only)),
+        "in_ref_only": in_ref_only,
+        "in_pred_only": in_pred_only,
     }
+
     return matches
 
 
@@ -334,7 +345,7 @@ class SegmentationMetrics:
         return render.render_metrics_napari(self)
 
 
-class LabeledSegmentation(object):
+class LabeledSegmentation:
     """LabeledSegmentation
 
     A helper class to enable simple calculation of accuracy statistics for
@@ -342,11 +353,8 @@ class LabeledSegmentation(object):
 
     """
 
-    def __init__(self, image):
-        assert isinstance(image, np.ndarray)
+    def __init__(self, image: npt.NDArray):
         self.image = image
-
-        # label it
         self.labeled, self.n_labels = label(image.astype(bool))
 
     @property

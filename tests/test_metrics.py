@@ -29,6 +29,8 @@ def test_calculate_no_true(image_pair):
     assert result.n_true_labels == 0
     assert result.n_pred_labels == 1
     assert result.n_true_positives == 0
+    assert result.n_false_negatives == 0
+    assert result.n_false_positives == 1
 
 
 def test_calculate_no_pred(image_pair):
@@ -41,3 +43,5 @@ def test_calculate_no_pred(image_pair):
     assert result.n_true_labels == 1
     assert result.n_pred_labels == 0
     assert result.n_true_positives == 0
+    assert result.n_false_negatives == 1
+    assert result.n_false_positives == 0
