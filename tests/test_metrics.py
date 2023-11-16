@@ -14,6 +14,14 @@ def test_calculate(image_pair, strict):
     # calculate the real number of true postives based on strict matching
     real_tp = int(IoU > result.iou_threshold) if strict else int(IoU > 0)
 
+    import matplotlib.pyplot as plt
+
+    fig, ax = plt.subplots(1, 2)
+    ax[0].imshow(y_true)
+    ax[1].imshow(y_pred)
+    ax[1].set_title(f"IoU: {IoU}, threshold: {result.iou_threshold}")
+    plt.show()
+
     assert result.n_true_labels == 1
     assert result.n_pred_labels == 1
     assert result.n_true_positives == real_tp
