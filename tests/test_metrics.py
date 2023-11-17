@@ -7,7 +7,8 @@ import umetrics
 @pytest.mark.parametrize("strict", (False, True))
 def test_calculate(image_pair, strict):
     """Run the metrics on a pair of images."""
-    y_true, y_pred, IoU = image_pair
+    y_true, y_pred, stats = image_pair
+    IoU = stats["IoU"]
 
     result = umetrics.calculate(y_true, y_pred, strict=strict)
 
@@ -21,8 +22,8 @@ def test_calculate(image_pair, strict):
 
 
 def test_calculate_no_true(image_pair):
-    """Run the metrics on a pair of images where there is no object in the GT."""
-    y_true, y_pred, IoU = image_pair
+    """Test a pair of images where there is no object in the GT."""
+    y_true, y_pred, _ = image_pair
     y_true = np.zeros_like(y_pred)
 
     result = umetrics.calculate(y_true, y_pred)
@@ -34,9 +35,8 @@ def test_calculate_no_true(image_pair):
 
 
 def test_calculate_no_pred(image_pair):
-    """Run the metrics on a pair of images where there is no object in the
-    prediction."""
-    y_true, y_pred, IoU = image_pair
+    """Test a pair of images where there is no object in the prediction."""
+    y_true, y_pred, _ = image_pair
     y_pred = np.zeros_like(y_true)
 
     result = umetrics.calculate(y_true, y_pred)
@@ -45,3 +45,15 @@ def test_calculate_no_pred(image_pair):
     assert result.n_true_positives == 0
     assert result.n_false_negatives == 1
     assert result.n_false_positives == 0
+
+
+def test_calculate_grid(image_grid):
+    """Test a multi-instance segmentation."""
+    y_true, y_pred, stats = image_grid
+    result = umetrics.calculate(y_true, y_pred)
+
+    assert result.n_true_labels == stats["n_true"]
+    assert result.n_pred_labels == stats["n_pred"]
+    assert result.n_true_positives == stats["n_pairs"]
+    assert result.n_false_positives == stats["n_missing_true"]
+    assert result.n_false_negatives == stats["n_missing_pred"]

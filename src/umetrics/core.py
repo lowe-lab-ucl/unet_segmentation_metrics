@@ -63,6 +63,11 @@ def find_matches(
         The reference (ground truth) segmentation.
     pred :
         The predicted segmentation.
+    strict : bool
+        Whether to use strict matching, i.e. only allowing matches above a
+        threshold IoU value.
+    iou_threshold :
+        A threshold value to use when strict matching.
 
     Return
     ------
@@ -71,17 +76,9 @@ def find_matches(
 
     """
 
-    # return a default dictionary of no matches
-    matches = {
-        "true_matches": [],
-        "true_matches_IoU": [],
-        "in_ref_only": set(ref.labels),
-        "in_pred_only": set(pred.labels),
-    }
-
     # make an infinite cost matrix, so that we only consider matches where
     # there is some overlap in the masks
-    cost_matrix = np.full((len(ref.labels), len(pred.labels)), np.inf)
+    cost_matrix = np.full((len(ref.labels), len(pred.labels)), 1e8)
 
     for r_id, ref_label in enumerate(ref.labels):
         mask = ref.labeled == ref_label
@@ -95,12 +92,26 @@ def find_matches(
 
     # if it's strict, make sure every element is above the threshold
     if strict:
-        assert np.all(cost_matrix >= iou_threshold)
+        cost_threshold = 1.0 - iou_threshold
+        assert np.all(cost_matrix >= cost_threshold), cost_matrix
 
-    try:
-        sol_row, sol_col = linear_sum_assignment(cost_matrix)
-    except ValueError:
+    # solve
+    sol_row, sol_col = linear_sum_assignment(cost_matrix)
+
+    # remove infeasible solutions
+    edges = [(r, c) for r, c in zip(sol_row, sol_col) if cost_matrix[r, c] <= 1]
+
+    # return a default dictionary if there are no matches
+    if not edges:
+        matches = {
+            "true_matches": [],
+            "true_matches_IoU": [],
+            "in_ref_only": set(ref.labels),
+            "in_pred_only": set(pred.labels),
+        }
         return matches
+
+    sol_row, sol_col = zip(*edges)
 
     # now that we've solved the LAP, find the matches that have been made
     used_ref = [ref.labels[row] for row in sol_row]
@@ -353,13 +364,14 @@ class SegmentationMetrics:
     @property
     def per_object_IoU(self):
         """Intersection over Union (IoU) metric"""
-        iou = []
-        for m in self.true_positives:
-            mask_ref = self._reference.labeled == m[0]
-            mask_pred = self._predicted.labeled == m[1]
+        # iou = []
+        # for m in self.true_positives:
+        #     mask_ref = self._reference.labeled == m[0]
+        #     mask_pred = self._predicted.labeled == m[1]
 
-            iou.append(_IoU(mask_ref, mask_pred))
-        return iou
+        #     iou.append(_IoU(mask_ref, mask_pred))
+        # return iou
+        return self._matches["true_matches_IoU"]
 
     @property
     def per_image_pixel_identity(self):
@@ -438,7 +450,6 @@ def batch(files, **kwargs):
     """batch process a list of files"""
     metrix = []
     for f_ref, f_pred in files:
-        print(f_pred)
         true = imread(f_ref)
         pred = imread(f_pred)
         result = calculate(true, pred, **kwargs).results
