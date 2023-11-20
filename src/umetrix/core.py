@@ -184,26 +184,9 @@ class MetricResults(object):
         return r
 
     def _repr_html_(self):
-        try:
-            import pandas as pd
-        except ImportError:
-            return (
-                "<b>Install pandas for nicer, tabular rendering.</b> <br>"
-                + self.__repr__()
-            )
+        from umetrix.notebooks import render_metrics_html
 
-        data = {
-            "metrics": (
-                "N",
-                "strict",
-                "IoU_threshold",
-            )
-            + METRICS,
-            "values": [self.n_images, self.strict, self.iou_threshold]
-            + [getattr(self, metric) for metric in METRICS],
-        }
-
-        return pd.DataFrame.from_dict(data=data, orient="columns").to_html()
+        return render_metrics_html(self)
 
     @property
     def localization_error(self) -> float:
