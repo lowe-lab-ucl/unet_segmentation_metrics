@@ -125,7 +125,7 @@ def find_matches(
 
     # return a dictionary of found matches
     matches = {
-        "true_matches": set(zip(used_ref, used_pred)),
+        "true_matches": list(set(zip(used_ref, used_pred))),
         "true_matches_IoU": IoUs,
         "in_ref_only": in_ref_only,
         "in_pred_only": in_pred_only,
