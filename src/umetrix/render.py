@@ -1,7 +1,3 @@
-__author__ = "Alan R. Lowe"
-__email__ = "a.lowe@ucl.ac.uk"
-
-
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
@@ -17,7 +13,6 @@ def plot_metrics(seg_metrics):
         iou[tp[0] - 1] = "{:.2f}".format(IoU[i])
 
     fig, ax = plt.subplots(1, figsize=(16, 12))
-    # plt.imshow(J_image)
     ax.imshow(seg_metrics.image_overlay)
 
     for i, (sy, sx) in enumerate(ref.bboxes):

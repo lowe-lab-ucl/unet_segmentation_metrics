@@ -26,8 +26,8 @@ dynamic = ["version"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
-include = ["umetrics*"]
+include = ["umetrix*"]
 
 [tool.setuptools_scm]
 local_scheme = "no-local-version"
-write_to = "src/umetrics/_version.py"
+write_to = "src/umetrix/_version.py"
