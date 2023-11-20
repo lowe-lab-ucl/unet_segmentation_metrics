@@ -10,10 +10,10 @@ from umetrix.core import METRICS
 
 
 DARK_CONTEXT = {
-    "axes.edgecolor": "white",
-    "xtick.color": "white",
-    "ytick.color": "white",
-    "axes.labelcolor": "white",
+    "axes.edgecolor": "gray",
+    "xtick.color": "gray",
+    "ytick.color": "gray",
+    "axes.labelcolor": "gray",
     "font.size": 18,
 }
 
@@ -26,9 +26,9 @@ def _text_color_based_on_value(value: float, cmap: colors.Colormap) -> str:
 
 def _header() -> str:
     css = (
-        ".row {display: flex; align-items: flex-start;}  \n "
-        ".metrics {width: 200px; float: left;} \n "
-        ".confusion {width: 256px; float: left;}"
+        ".row {display: inline-flex; align-items: flex-start;}  \n "
+        ".metrics {float: left;} \n "
+        ".confusion {width: 200px; float: left;}"
     )
     return f"<html><style>{css}</style><body>"
 
@@ -55,7 +55,7 @@ def render_metrics_html(metrics) -> str:
         "<div class='row'><div class='metrics'>",
         html_table,
         "</div><div class='confusion'>",
-        f"<img src='data:image/png;base64,{encoded_cm}' width=256px/>",
+        f"<img src='data:image/png;base64,{encoded_cm}' width=200px/>",
         "</div></div>",
         _footer(),
     )
@@ -91,7 +91,9 @@ def _render_confusion(metrics, *, cmap: str = "Blues") -> str:
         _, ax = plt.subplots(figsize=(4, 4))
         ax.pcolor(grid, cmap=cmap)
         ax.set_xticks([0.5, 1.5], labels=["Negative", "Positive"])
-        ax.set_yticks([0.5, 1.5], labels=["Negative", "Positive"])
+        ax.set_yticks(
+            [0.5, 1.5], labels=["Negative", "Positive"], rotation=90, va="center"
+        )
 
         for i, j in itertools.product(range(2), range(2)):
             ax.text(
