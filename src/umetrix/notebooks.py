@@ -26,8 +26,8 @@ def _text_color_based_on_value(value: float, cmap: colors.Colormap) -> str:
 
 def _header() -> str:
     css = (
-        ".row {display: inline-flex; align-items: flex-start;}  \n "
-        ".metrics {float: left;} \n "
+        ".row {display: inline-flex; align-items: flex-start;}\n"
+        ".metrics {float: left;}\n"
         ".confusion {width: 200px; float: left;}"
     )
     return f"<html><style>{css}</style><body>"
@@ -49,15 +49,15 @@ def render_metrics_html(metrics) -> str:
     )
 
     html = (
-        _header(),
-        "<p><h3>Segmentation Metrics</h3></p>",
-        html_strict,
-        "<div class='row'><div class='metrics'>",
-        html_table,
-        "</div><div class='confusion'>",
-        f"<img src='data:image/png;base64,{encoded_cm}' width=200px/>",
-        "</div></div>",
-        _footer(),
+        _header()
+        + "<p><h3>Segmentation Metrics</h3></p>"
+        + html_strict
+        + "<div class='row'><div class='metrics'>"
+        + html_table
+        + "</div><div class='confusion'>"
+        + f"<img src='data:image/png;base64,{encoded_cm}' width=200px/>"
+        + "</div></div>"
+        + _footer()
     )
 
     return html
