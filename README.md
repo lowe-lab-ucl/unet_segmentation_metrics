@@ -1,3 +1,8 @@
+[![PyPI](https://img.shields.io/pypi/v/umetrix)](https://pypi.org/project/umetrix)
+[![Black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+[![umetrix](https://github.com/lowe-lab-ucl/unet_segmentation_metrics/actions/workflows/test.yml/badge.svg)]([https://github.com/quantumjot/vne](https://github.com/lowe-lab-ucl/unet_segmentation_metrics)/actions/workflows/test.yml)
+[![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white)](https://github.com/pre-commit/pre-commit)
+
 # UNet segmentation metrics
 
 *WORK IN PROGRESS*
