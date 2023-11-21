@@ -20,7 +20,7 @@ TODO:
 ### Single image usage
 
 ```python
-import umetrics
+import umetrix
 from skimage.io import imread
 
 y_true = imread('true.tif')
@@ -29,7 +29,12 @@ y_pred = imread('pred.tif')
 
 # can now make the calculation strict, by only considering objects that have
 # an IoU above a theshold as being true positives
-result = umetrics.calculate(y_true, y_pred, strict=True, iou_threshold=0.5)
+result = umetrix.calculate(
+    y_true,
+    y_pred,
+    strict=True,
+    iou_threshold=0.5
+)
 
 print(result.results)
 ```
@@ -56,14 +61,16 @@ localization_error: 0.010
 ### Batch processing
 
 ```python
-import umetrics
+import umetrix
 
 # provide a list of file pairs ('true', 'prediction')
-files = [('true0.tif', 'pred0.tif'),
-         ('true1.tif', 'pred1.tif'),
-         ('true2.tif', 'pred2.tif')]
+files = [
+    ('true0.tif', 'pred0.tif'),
+    ('true1.tif', 'pred1.tif'),
+    ('true2.tif', 'pred2.tif')
+]
 
-batch_result = umetrics.batch(files)
+batch_result = umetrix.batch(files)
 ```
 
 Returns aggregate statistics over the batch. Jaccard index is calculated over
@@ -79,8 +86,8 @@ $ git clone https://github.com/quantumjot/unet_segmentation_metrics.git
 
 2. (Optional, but advised) Create a conda environment:
 ```sh
-$ conda create -n umetrics python=3.7
-$ conda activate umetrics
+$ conda create -n umetrix python=3.9
+$ conda activate umetrix
 ```
 
 3. Install the package

@@ -1,3 +1,6 @@
+*.ipynb_checkpoints
+*.egg-info/
 .DS_Store
-umetrics/__pycache__
-notebooks/.ipynb_checkpoints
+__pycache__
+notebooks/
+_version.py

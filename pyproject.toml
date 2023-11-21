@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools", "setuptools-scm"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "umetrix"
+authors = [
+  {name = "Alan R. Lowe", email = "a.lowe@ucl.ac.uk"}
+]
+description = "UNet Segmentation Metrics"
+readme = "README.md"
+requires-python = ">=3.8"
+keywords = ["image analysis"]
+license = {text = "BSD-3-Clause"}
+classifiers = [
+  "Programming Language :: Python :: 3"
+]
+dependencies = [
+  "matplotlib",
+  "numpy",
+  "pandas",
+  "scikit-learn",
+  "scikit-image>=0.20.0" # to include the spacing argument in regionprops
+]
+dynamic = ["version"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["umetrix*"]
+
+[tool.setuptools_scm]
+local_scheme = "no-local-version"
+write_to = "src/umetrix/_version.py"
